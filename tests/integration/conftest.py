@@ -12,6 +12,7 @@ from tests.constants import (
     SPEC_COMMENTED_PATCHES,
     SPEC_CONDITIONALIZED_CHANGELOG,
     SPEC_CONDITIONALIZED_VERSION,
+    SPEC_FORGEVERSION,
     SPEC_INCLUDES,
     SPEC_MACROS,
     SPEC_MINIMAL,
@@ -136,6 +137,13 @@ def spec_conditionalized_changelog(tmp_path):
 def spec_conditionalized_version(tmp_path):
     specfile_path = tmp_path / SPECFILE
     shutil.copyfile(SPEC_CONDITIONALIZED_VERSION / SPECFILE, specfile_path)
+    return specfile_path
+
+
+@pytest.fixture(scope="function")
+def spec_forgeversion(tmp_path):
+    specfile_path = tmp_path / SPECFILE
+    shutil.copyfile(SPEC_FORGEVERSION / SPECFILE, specfile_path)
     return specfile_path
 
 

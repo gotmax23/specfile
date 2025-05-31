@@ -538,6 +538,26 @@ class Specfile:
                 return True
         return False
 
+    @property
+    def has_forgeversion(self) -> bool:
+        """
+        Whether the specfile uses %forgeversion from forge-srpm-macros.
+        This macro is used to automatically compute the Version tag based on
+        the value of the %version0 macro and %commit or any other snapshot
+        versioning configured in the specfile that the forge macros recognize.
+
+        See also:
+            - https://fedoraproject.org/wiki/Changes/Revitalize_Forge_Macros
+            - https://git.sr.ht/~gotmax23/forge-srpm-macros/tree/main/item/rpm/macros.d/macros.forge#L81 # noqa
+        """
+        for node in ValueParser.flatten(ValueParser.parse(self.version)):
+            if (
+                isinstance(node, (MacroSubstitution, EnclosedMacroSubstitution))
+                and node.name == "forgeversion"
+            ):
+                return True
+        return False
+
     @staticmethod
     def contains_autochangelog(section: Section) -> bool:
         """
@@ -1035,6 +1055,7 @@ class Specfile:
         prerelease_suffix_pattern: Optional[str] = None,
         prerelease_suffix_macro: Optional[str] = None,
         comment_out_style: CommentOutStyle = CommentOutStyle.DNL,
+        update_forgeversion: bool = True,
     ) -> None:
         """
         Updates spec file version.
@@ -1058,6 +1079,11 @@ class Specfile:
                 To be commented out or uncommented accordingly.
             comment_out_style: Style of commenting out `prerelease_suffix_macro`.
                 See `CommentOutStyle`. Defaults to `CommentOutStyle.DNL`.
+            update_forgeversion:
+                Enable support for %forgeversion from forge-srpm-macros.
+                If this arg is True and forgeversion is used to populate Version,
+                attempt to update the %version0 macro definition instead of
+                modifying the Version tag directly.
 
         Raises:
             SpecfileException: If `prerelease_suffix_pattern` is invalid.
@@ -1089,6 +1115,15 @@ class Specfile:
             update_macro(True)
             return version[:base_end] + "~" + version[suffix_start:]
 
+        if self.has_forgeversion:
+            with self.macro_definitions() as macros:
+                # If the version0 is not set, the specfile is doing something
+                # unsupported (either by us or by the Forge macros, so fall
+                # back to the usual mechanism).
+                if "version0" in macros:
+                    macros.version0.body = handle_prerelease(version)
+                    # We succeeded in updating %version0, so don't update Version tag
+                    return
         self.update_tag("Version", handle_prerelease(version))
 
     @staticmethod

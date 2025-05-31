@@ -3,6 +3,7 @@
 
 import copy
 import datetime
+from typing import Callable
 
 import pytest
 import rpm
@@ -676,6 +677,16 @@ def test_update_version(
         assert md.upstream_version.body != version
     assert spec.version == version
     assert spec.expanded_version == version
+
+
+def test_forgeversion(specfile_factory: Callable[..., Specfile], spec_forgeversion):
+    spec = specfile_factory(spec_forgeversion)
+    assert spec.has_forgeversion
+    spec.update_version("0.36.0")
+    with spec.macro_definitions() as md:
+        assert md.version0.body == "0.36.0"
+    assert spec.version == "%{forgeversion -z0}"
+    assert spec.expanded_version == "0.36.0"
 
 
 def test_trailing_newline(specfile_factory, spec_autosetup, spec_no_trailing_newline):
